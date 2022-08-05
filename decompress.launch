@@ -1,0 +1,9 @@
+<launch>
+    <!-- <param name="use_sim_time" value="true" /> -->
+    <!-- <node name="republish" type="republish" pkg="image_transport" output="screen" args="compressed in:=/camera_front_driver/image_raw/imagezero raw out:=/camera/front" /> -->
+    <!-- <node name="republish_color" type="republish" pkg="image_transport" output="screen" args="compressed in:=/camera/color/image_raw raw out:=/camera/color/image_raw" /> -->
+    <!-- <node name="decompress_cam0" type="republish" pkg="image_transport" args="imagezero in:=/camera_front_driver/image_raw/imagezero raw out:=/camera/front" /> -->
+    <node name="decompress_cam0" type="republish" pkg="image_transport" args="imagezero in:=/camera_front_driver/image_raw raw out:=/camera/front" />
+    <node name="decompress_cam1" type="republish" pkg="image_transport" args="imagezero in:=/camera_left_front_driver/image_raw raw out:=/camera/front_left" />
+    <node name="decompress_cam2" type="republish" pkg="image_transport" args="imagezero in:=/camera_right_front_driver/image_raw raw out:=/camera/front_right" />
+</launch>

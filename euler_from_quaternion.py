@@ -5,7 +5,7 @@ from tf.transformations import euler_from_quaternion, quaternion_from_euler
 import math 
 
 
-def get_rotation (msg):
+def get_rotation(msg):
 	global roll, pitch, yaw
 	orientation_q = msg.orientation
 	orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]

@@ -9,7 +9,7 @@ from squaternion import Quaternion
 from message_filters import ApproximateTimeSynchronizer, Subscriber
 import cv2
 from sensor_msgs.msg import Image, PointCloud2
-import pcl  
+# import pcl  
 import ros_numpy  
 import sensor_msgs
 
@@ -17,7 +17,9 @@ from cv_bridge import CvBridge, CvBridgeError
 # from semantic_mapper.msg import SemLabel
 import numpy as np
 from sys import exit
+import os
 from scipy.spatial.transform import Rotation as R
+import open3d as o3d
 
 
 def callPose(msg):
@@ -164,11 +166,20 @@ def convert_pc_msg_to_np(pc_msg):
 
 	# Conversion from PointCloud2 msg to np array.
 	pc_np = ros_numpy.point_cloud2.pointcloud2_to_xyz_array(pc_msg, remove_nans=True)
+	pc_np2 = ros_numpy.point_cloud2.pointcloud2_to_array(pc_msg)
 	# pc_pcl = pcl.PointCloud2(np.array(pc_np, dtype=np.float32))
-	return pc_np  # point cloud in numpy and pcl format
+	
+	print("Shape: ", pc_np.shape, type(pc_np2[0]), len(pc_np2[0]), pc_msg.fields)
+	return pc_np 
 
 
 def callPosePointCloud(msg, pcMsg):
+	global freq
+
+	if (freq%2 != 0):
+		freq = freq + 1
+		return
+
 	px, py, pz = msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z
 	qx, qy, qz, qw = msg.pose.pose.orientation.x, msg.pose.pose.orientation.y,\
 	msg.pose.pose.orientation.z, msg.pose.pose.orientation.w
@@ -176,15 +187,26 @@ def callPosePointCloud(msg, pcMsg):
 	q = Quaternion(qw, qx, qy, qz)
 	# print(q.to_euler(degrees=True))
 	rot_matrix = np.array(q.to_rot())
-	# print(rot_matrix)
-	
+	T = np.eye(3, 4)
+	T[:3, :3] = rot_matrix
+	T[:3, 3] = [px, py, pz]
+	T = T.reshape(12, )
+
 	pc_np = convert_pc_msg_to_np(pcMsg)
-	print(pc_np.shape)
+	# Saving pointcloud
+	pcd = o3d.geometry.PointCloud()
+	pcd.points = o3d.utility.Vector3dVector(pc_np)
+	o3d.io.write_point_cloud(os.path.join(dirPointCloud, f"{freq//2}.pcd"), pcd)
+	
+	# o3d.visualization.draw_geometries([pcd])
+	# print(pc_np.shape, type(pc_np))
 
+	# Saving poses
+	line = str(freq//2) + " " + str(T[0]) + " " + str(T[1]) + " " + str(T[2]) + " " + str(T[3]) + " " + str(T[4]) + " " + str(T[5]) + " " + str(T[6]) + " " + str(T[7]) + " " + str(T[8]) + " " + str(T[9]) + " " + str(T[10]) + " " + str(T[11]) + "\n"
+	filePose.write(line)
 
-	# line = str(px) + " " + str(py) + " " + str(yaw) + " " + str(pcMsg.height) + " " + str(pcMsg.width) + "\n"
-	# fileP.write(line)
-	# print(line)
+	freq = freq + 1
+
 
 def main1():
 	rospy.Subscriber('odom', Odometry, callPose)
@@ -250,6 +272,10 @@ if __name__ == '__main__':
 	# dircImg = "/home/cair/backup/d2-net/dataVO/data11/rgb/"
 	# dircDepth = "/home/cair/backup/d2-net/dataVO/data11/depth/"
 	# dircPose = "/home/cair/backup/d2-net/dataPose/data5/pose/"
+	path = "/home/usp/data/li_imu_ola/calib_data2/"
+	dirPointCloud = os.path.join(path, "pointclouds")
+	os.makedirs(dirPointCloud, exist_ok=True)
+	filePose = open(os.path.join(path, 'pose.txt'), 'w')
 
 	imgId = 0
 	imgCnt = 0
@@ -268,3 +294,4 @@ if __name__ == '__main__':
 	rospy.spin()
 
 	# fileP.close()
+	filePose.close()
